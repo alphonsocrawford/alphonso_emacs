@@ -1,0 +1,218 @@
+#+STARTUP: content
+
+* My init.el file
+
+This is the file, I'll keep everything in sections so it's easier to
+edit. This gets loading automagically by init.el.
+
+** basic setup
+
+set the temp file to live in the temp directory
+
+#+BEGIN_SRC emacs-lisp
+  (setq backup-directory-alist
+		`((".*" . ,temporary-file-directory)))
+  (setq auto-save-file-name-transforms
+		`((".*" ,temporary-file-directory t)))
+#+END_SRC
+
+add a path to the load path for custom scripts
+
+#+BEGIN_SRC emacs-lisp
+  (setq load-path (cons "~/.emacs.d/lisp" load-path))
+#+END_SRC
+
+use ibuffer always
+
+#+BEGIN_SRC emacs-lisp
+  (global-set-key (kbd "C-x b") 'ibuffer)
+#+END_SRC
+
+** ido mode
+#+BEGIN_SRC emacs-lisp
+  (require 'ido)
+  (setq ido-enable-flex-matching t)
+  (setq ido-everywhere t)
+  (ido-mode 1)
+#+END_SRC
+* Editorconfig
+
+#+BEGIN_SRC emacs-lisp
+  (require 'editorconfig)
+  (editorconfig-mode 1)
+#+END_SRC
+
+* company mode
+
+Load company mode in all buffers.
+
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'after-init-hook 'global-company-mode)
+#+END_SRC
+
+* iy-go-to-char
+
+#+BEGIN_SRC emacs-lisp
+  (require 'iy-go-to-char)
+  (global-set-key (kbd "M-m") 'iy-go-to-char)
+#+END_SRC
+
+* buffer-move
+
+#+BEGIN_SRC emacs-lisp
+  (require 'buffer-move)
+
+  (global-set-key (kbd "<C-s-left>")  'buf-move-left)
+  (global-set-key (kbd "<C-s-right>") 'buf-move-right)
+#+END_SRC
+
+* coding section
+
+** ruby code fold
+
+#+BEGIN_SRC emacs-lisp
+(add-hook 'ruby-mode-hook
+	(lambda () (hs-minor-mode)))
+
+  (eval-after-load "hideshow"
+	'(add-to-list 'hs-special-modes-alist
+	  `(ruby-mode
+		,(rx (or "def" "class" "module" "do" "{" "[")) ; Block start
+		,(rx (or "}" "]" "end"))                       ; Block end
+		,(rx (or "#" "=begin"))                        ; Comment start
+		ruby-forward-sexp nil)))
+#+END_SRC
+
+** magit
+
+#+BEGIN_SRC emacs-lisp
+  (global-set-key (kbd "C-x g") 'magit-status)
+#+END_SRC
+
+** smart tabs
+
+Two things happening here: adding smart tabs to some modes by default
+(c, c++, js & java) and setting the default tab-width as well. I'm
+also turning off indentation for namespaces in c++.
+
+#+BEGIN_SRC emacs-lisp
+  (smart-tabs-insinuate 'c 'c++ 'javascript 'java)
+  (setq-default tab-width 4)
+  (defun my-c-setup ()
+	(c-set-offset 'innamespace 0))
+  (add-hook 'c++-mode-hook 'my-c-setup)
+#+END_SRC
+
+** flycheck
+
+#+BEGIN_SRC emacs-lisp
+  (require 'flycheck)
+  (add-hook 'after-init-hook #'global-flycheck-mode)
+#+END_SRC
+
+** typescript
+
+This is taken from the official [[https://github.com/ananthakumaran/tide][tide docs]]. It requires company mode.
+
+#+BEGIN_SRC emacs-lisp
+  (defun setup-tide-mode ()
+	(interactive)
+	(tide-setup)
+	(flycheck-mode +1)
+	(setq flycheck-check-syntax-automatically '(save mode-enabled))
+	(eldoc-mode +1)
+	(tide-hl-identifier-mode +1))
+
+  ;; formats the buffer before saving
+  ;(add-hook 'before-save-hook 'tide-format-before-save)
+  (add-hook 'typescript-mode-hook #'setup-tide-mode)
+  (setq tide-format-options '(:indentStyle 2 :convertTabsToSpaces nil))
+#+END_SRC
+
+** web-mode
+
+Adds tsx/js support in web-mode
+
+#+BEGIN_SRC emacs-lisp
+  (require 'web-mode)
+  (add-to-list 'auto-mode-alist '("\\.tsx\\'" . web-mode))
+  (add-to-list 'auto-mode-alist '("\\.js\\'" . web-mode))
+  (add-to-list 'auto-mode-alist '("\\.jsx\\'" . web-mode))
+  (add-hook 'web-mode-hook
+			(lambda ()
+			  (when (or (string-equal "tsx" (file-name-extension buffer-file-name))
+						(string-equal "js" (file-name-extension buffer-file-name))
+						(string-equal "jsx" (file-name-extension buffer-file-name)))
+				(setup-tide-mode)
+				;(setq web-mode-markup-indent-offset 2)
+				;(setq web-mode-code-indent-offset 2)
+				)))
+  (setq web-mode-content-types-alist
+	'(("jsx" . "\\.js[x]?\\'")))
+#+END_SRC
+
+** csharp-mode
+
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'csharp-mode-hook 'omnisharp-mode)
+#+END_SRC
+
+** geiser
+
+We only care about guile (for now)
+
+#+BEGIN_SRC emacs-lisp
+  (setq geiser-active-implementations '(guile iron))
+#+END_SRC
+
+Auto parens-mode for scheme
+
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'scheme-mode-hook           #'enable-paredit-mode)
+#+END_SRC
+
+** Rubocop 
+Used for rubocop checks on ruby projects
+#+BEGIN_SRC
+  (add-to-list 'load-path "~/.emacs.d/vendor")
+  (require 'rubocop)
+#+END_SRC
+
+* Org-mode
+
+key bindings (the typical ones)
+
+#+BEGIN_SRC emacs-lisp
+  (global-set-key "\C-cl" 'org-store-link)
+  (global-set-key "\C-ca" 'org-agenda)
+  (global-set-key "\C-cc" 'org-capture)
+  (global-set-key "\C-cb" 'org-iswitchb)
+#+END_SRC
+
+** hide-mode-line
+
+#+BEGIN_SRC emacs-lisp
+  (autoload 'hide-mode-line "hide-mode-line" nil t)
+#+END_SRC
+
+** ditaa (and other languages)
+
+#+BEGIN_SRC emacs-lisp
+  (org-babel-do-load-languages
+   'org-babel-load-languages
+   '((ditaa . t) (plantuml . t))) ; this line activates ditaa
+
+  (setq org-plantuml-jar-path
+		(expand-file-name "~/.emacs.d/elpa/contrib/scripts/plantuml.jar"))
+#+END_SRC
+
+* email
+
+email config
+
+#+BEGIN_SRC emacs-lisp
+  (autoload 'wl "wl" "Wanderlust" t)
+#+END_SRC
+
+* telephone line
+
